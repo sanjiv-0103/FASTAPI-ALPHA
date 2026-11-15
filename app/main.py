@@ -5,6 +5,12 @@ from fastapi import FastAPI, Response, status, HTTPException
 from pydantic import BaseModel
 from psycopg2 import Error
 from app.database import get_connection
+# Import SQLAlchemy Models and Engine
+from . import models
+from .database import engine
+
+# Create Missing Database Tables
+models.Base.metadata.create_all(bind=engine)
 
 # 2. Initialize FastAPI
 app=FastAPI()
