@@ -1,22 +1,14 @@
 # 1. Import Libraries
-from typing import Optional
+from . import models, schemas
 from fastapi import FastAPI, Depends, Response, status, HTTPException
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from . import models
+from . import models, schemas
 from .database import SessionLocal
 
 # 2. Initialize FastAPI
 app=FastAPI()
 
-# 3. Define Pydantic Post Model
-class Post(BaseModel):
-    title:str
-    content:str
-    published:bool=True
-    rating:Optional[int]=None
-
-# 4. Create Database Session Dependency
+# 3. Create Database Session Dependency
 def get_db():
     db=SessionLocal()
     try:
@@ -24,39 +16,40 @@ def get_db():
     finally:
         db.close()
 
-# 5. GET - Root Endpoint
+# 4. GET - Root Endpoint
 @app.get("/")
 def root():
     return {"message":"Hello World"}
 
-# 6. GET - Retrieve All Posts Using ORM
-@app.get("/posts")
+# 5. GET - Retrieve All Posts Using ORM
+@app.get("/posts",response_model=list[schemas.Post])
 def get_posts(db:Session=Depends(get_db)):
     posts=db.query(models.Post).order_by(models.Post.id).all()
-    return {"data":posts}
+    return posts
 
-# 7. POST - Create a New Post Using ORM
-@app.post("/posts",status_code=status.HTTP_201_CREATED)
-def create_posts(post:Post,db:Session=Depends(get_db)):
+# 6. POST - Create a New Post Using ORM
+@app.post("/posts",status_code=status.HTTP_201_CREATED,response_model=schemas.Post)
+def create_posts(post:schemas.PostCreate,db:Session=Depends(get_db)):
     new_post=models.Post(**post.model_dump())
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
-    return {"data":new_post}
+    return new_post
 
-# 8. GET - Retrieve the Latest Post Using ORM
-@app.get("/posts/latest")
+# 7. GET - Retrieve the Latest Post Using ORM
+@app.get("/posts/latest",response_model=schemas.Post)
 def get_latest_post(db:Session=Depends(get_db)):
+
     post=db.query(models.Post).order_by(models.Post.id.desc()).first()
     if post is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No posts available"
         )
-    return {"detail":post}
+    return post
 
-# 9. GET - Retrieve a Specific Post by ID Using ORM
-@app.get("/posts/{id}")
+# 8. GET - Retrieve a Specific Post by ID Using ORM
+@app.get("/posts/{id}",response_model=schemas.Post)
 def get_post(id:int,db:Session=Depends(get_db)):
     post=db.query(models.Post).filter(models.Post.id==id).first()
     if post is None:
@@ -64,9 +57,9 @@ def get_post(id:int,db:Session=Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Post with id:{id} was not found"
         )
-    return {"post_detail":post}
+    return post
 
-# 10. DELETE - Remove a Post by ID Using ORM
+# 9. DELETE - Remove a Post by ID Using ORM
 @app.delete("/posts/{id}",status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id:int,db:Session=Depends(get_db)):
     post=db.query(models.Post).filter(models.Post.id==id).first()
@@ -79,9 +72,9 @@ def delete_post(id:int,db:Session=Depends(get_db)):
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-# 11. PUT - Update an Existing Post by ID Using ORM
-@app.put("/posts/{id}")
-def update_post(id:int,post:Post,db:Session=Depends(get_db)):
+# 10. PUT - Update an Existing Post by ID Using ORM
+@app.put("/posts/{id}",response_model=schemas.Post)
+def update_post(id:int,post:schemas.PostCreate,db:Session=Depends(get_db)):
     existing_post=db.query(models.Post).filter(models.Post.id==id).first()
     if existing_post is None:
         raise HTTPException(
@@ -93,4 +86,4 @@ def update_post(id:int,post:Post,db:Session=Depends(get_db)):
         setattr(existing_post,key,value)
     db.commit()
     db.refresh(existing_post)
-    return {"data":existing_post}
+    return existing_post
