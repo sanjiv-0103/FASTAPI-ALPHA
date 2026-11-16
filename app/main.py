@@ -1,9 +1,12 @@
 # 1. Import Libraries
-from . import models, schemas
+# 1. Import Libraries
 from fastapi import FastAPI, Depends, Response, status, HTTPException
 from sqlalchemy.orm import Session
-from . import models, schemas
 from .database import SessionLocal
+from . import models, schemas, utils
+
+# Password Hashing Setup
+#password_hash = PasswordHash.recommended()
 
 # 2. Initialize FastAPI
 app=FastAPI()
@@ -87,3 +90,25 @@ def update_post(id:int,post:schemas.PostCreate,db:Session=Depends(get_db)):
     db.commit()
     db.refresh(existing_post)
     return existing_post
+
+
+# 11. POST - Register a New User Using ORM
+@app.post("/users",status_code=status.HTTP_201_CREATED,response_model=schemas.UserResponse)
+def create_user(user:schemas.UserCreate,db:Session=Depends(get_db)):
+
+    # Check Whether Email Already Exists
+    existing_user=db.query(models.User).filter(models.User.email==user.email).first()
+
+    if existing_user is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered"
+        )
+    # Hash Password Before Saving
+    hashed_password=utils.hash(user.password)
+    # Create New User
+    new_user=models.User(email=user.email,password=hashed_password)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
