@@ -26,3 +26,12 @@ SessionLocal=sessionmaker(autocommit=False,autoflush=False,bind=engine)
 
 # 6. Create Base Class for ORM Models
 Base=declarative_base()
+
+
+# Database Session Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
