@@ -8,10 +8,10 @@ from ..database import get_db
 # 2. Initialize Router
 router = APIRouter()
 
-# 3. GET - Retrieve All Posts
+# 3. GET - Retrieve Posts Using Pagination
 @router.get("/posts", response_model=list[schemas.Post])
-def get_posts(db: Session = Depends(get_db)):
-    return db.query(models.Post).order_by(models.Post.id).all()
+def get_posts(skip:int=0, limit:int=10,db:Session=Depends(get_db)):
+    return db.query(models.Post).order_by(models.Post.id).offset(skip).limit(limit).all()
 
 # 4. POST - Create a New Post
 @router.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
