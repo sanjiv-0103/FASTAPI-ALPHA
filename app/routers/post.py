@@ -41,9 +41,14 @@ def get_post(id: int, db: Session = Depends(get_db)):
     return post
 
 
-# 7. DELETE - Remove a Post by ID
+
+# 7. DELETE - Remove Post Using JWT Authentication
 @router.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db: Session = Depends(get_db)):
+def delete_post(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(oauth2.get_current_user)
+):
     post = db.query(models.Post).filter(models.Post.id == id).first()
 
     if post is None:
