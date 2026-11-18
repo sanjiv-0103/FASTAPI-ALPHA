@@ -40,22 +40,34 @@ def get_post(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Post not found")
     return post
 
-# 7. DELETE - Remove a Post
+
+# 7. DELETE - Remove a Post by ID
 @router.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first()
+
     if post is None:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Post with ID {id} does not exist"
+        )
+
     db.delete(post)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-# 8. PUT - Update a Post
+
+
+# 8. PUT - Update an Existing Post
 @router.put("/posts/{id}", response_model=schemas.Post)
 def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
     existing_post = db.query(models.Post).filter(models.Post.id == id).first()
+
     if existing_post is None:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Post with ID {id} does not exist"
+        )
 
     for key, value in post.model_dump().items():
         setattr(existing_post, key, value)
@@ -63,3 +75,4 @@ def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(existing_post)
     return existing_post
+
