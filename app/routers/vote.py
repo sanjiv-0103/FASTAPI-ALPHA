@@ -17,7 +17,18 @@ def vote(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(oauth2.get_current_user)
 ):
-    # 4. Search for Existing Vote
+    # 4. Check Whether the Post Exists
+    post = db.query(models.Post).filter(
+        models.Post.id == vote.post_id
+    ).first()
+
+    if post is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Post with id: {vote.post_id} does not exist"
+        )
+
+    # 5. Search for Existing Vote
     vote_query = db.query(models.Vote).filter(
         models.Vote.post_id == vote.post_id,
         models.Vote.user_id == current_user.id
@@ -25,7 +36,7 @@ def vote(
 
     found_vote = vote_query.first()
 
-    # 5. Add Vote
+    # 6. Add Vote (dir = 1)
     if vote.dir == 1:
         if found_vote:
             raise HTTPException(
@@ -39,9 +50,10 @@ def vote(
         )
         db.add(new_vote)
         db.commit()
+
         return {"message": "Successfully added vote"}
 
-    # 6. Remove an Existing Vote
+    # 7. Remove Vote (dir = 0)
     else:
         if not found_vote:
             raise HTTPException(
