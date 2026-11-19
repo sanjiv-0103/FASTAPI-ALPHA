@@ -1,4 +1,4 @@
 import os
 
-path = os.getenv("Path")
+path = os.getenv("MY_DB_URL")
 print(path)
