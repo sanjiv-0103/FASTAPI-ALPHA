@@ -1,15 +1,20 @@
 
-# 1. Test Addition
-def test_addition():
-    result = 5 + 3
-    assert result == 8
+# 1. Test Addition Using Fixture
+def test_addition(sample_numbers):
+    a, b = sample_numbers
+    assert a + b == 15
 
-# 2. Test Subtraction
-def test_subtraction():
-    result = 10 - 4
-    assert result == 6
+# 2. Test Subtraction Using Fixture
+def test_subtraction(sample_numbers):
+    a, b = sample_numbers
+    assert a - b == 5
 
-# 3. Test Multiplication
-def test_multiplication():
-    result = 5 * 4
-    assert result == 20
+# 3. Test Multiplication Using Fixture
+def test_multiplication(sample_numbers):
+    a, b = sample_numbers
+    assert a * b == 50
+
+# 4. Test Division Using Fixture
+def test_division(sample_numbers):
+    a, b = sample_numbers
+    assert a / b == 2
