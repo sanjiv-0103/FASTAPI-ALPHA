@@ -152,3 +152,4 @@ def test_update_invalid_title(authorized_client, test_post, title):
         }
     )
     assert response.status_code == 422
+
