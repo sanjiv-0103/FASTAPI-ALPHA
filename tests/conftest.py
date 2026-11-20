@@ -1,22 +1,20 @@
 
-# 1. Import Libraries
 import os
 import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 
-# 2. Select Test Database Before Importing App
+# 1. Configure Test Database
 os.environ["DB_HOST"] = "127.0.0.1"
 os.environ["DB_PORT"] = "5433"
 os.environ["DB_NAME"] = "fastapi_test"
 
-# 3. Import Database and Models
+# 2. Import Database
 from app.database import engine, Base, get_db
-from app import models
-from app import oauth2
+from app import models, oauth2
 
-# 4. Confirm Database Is Safe for Testing
+# 3. Verify Test Database
 assert engine.url.database == "fastapi_test", "Wrong database!"
 
 with engine.connect() as connection:
@@ -24,18 +22,18 @@ with engine.connect() as connection:
         text("SELECT current_database()")
     ).scalar()
 
-assert db_name == "fastapi_test", "Refusing to use development database!"
+assert db_name == "fastapi_test", "Refusing development database!"
 
-# 5. Import FastAPI Application
+# 4. Import FastAPI Application
 from app.main import app
 
-# 6. Prepare Test Tables
+# 5. Initialize Test Database
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
     Base.metadata.create_all(bind=engine)
     yield
 
-# 7. Create Isolated Test Session
+# 6. Database Session Fixture
 @pytest.fixture
 def db_session(setup_database):
     connection = engine.connect()
@@ -54,7 +52,7 @@ def db_session(setup_database):
         transaction.rollback()
         connection.close()
 
-# 8. Override Database Dependency
+# 7. TestClient Fixture
 @pytest.fixture
 def client(db_session):
     def override_get_db():
@@ -68,13 +66,12 @@ def client(db_session):
     finally:
         app.dependency_overrides.pop(get_db, None)
 
-# 9. Preserve Previous Lesson Fixture
+# 8. Sample Numbers Fixture
 @pytest.fixture
 def sample_numbers():
     return 10, 5
 
-
-# 10. Create a Reusable Test User
+# 9. Test User Fixture
 @pytest.fixture
 def test_user(client):
     response = client.post(
@@ -84,23 +81,32 @@ def test_user(client):
             "password": "TestPass123!"
         }
     )
+
     assert response.status_code == 201
+
     return {
         **response.json(),
         "password": "TestPass123!"
     }
 
-# 11. Generate JWT for Test User
+# 10. Valid JWT Fixture
 @pytest.fixture
 def token(test_user):
     return oauth2.create_access_token(
         data={"user_id": test_user["id"]}
     )
 
-# 12. Create Authenticated Client
+# 11. Authorized TestClient Fixture
 @pytest.fixture
 def authorized_client(client, token):
+    original_headers = client.headers.copy()
+
     client.headers.update({
         "Authorization": f"Bearer {token}"
     })
-    return client
+
+    try:
+        yield client
+    finally:
+        client.headers.clear()
+        client.headers.update(original_headers)
