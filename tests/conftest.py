@@ -14,6 +14,7 @@ os.environ["DB_NAME"] = "fastapi_test"
 # 3. Import Database and Models
 from app.database import engine, Base, get_db
 from app import models
+from app import oauth2
 
 # 4. Confirm Database Is Safe for Testing
 assert engine.url.database == "fastapi_test", "Wrong database!"
@@ -71,3 +72,35 @@ def client(db_session):
 @pytest.fixture
 def sample_numbers():
     return 10, 5
+
+
+# 10. Create a Reusable Test User
+@pytest.fixture
+def test_user(client):
+    response = client.post(
+        "/users",
+        json={
+            "email": "testuser@example.com",
+            "password": "TestPass123!"
+        }
+    )
+    assert response.status_code == 201
+    return {
+        **response.json(),
+        "password": "TestPass123!"
+    }
+
+# 11. Generate JWT for Test User
+@pytest.fixture
+def token(test_user):
+    return oauth2.create_access_token(
+        data={"user_id": test_user["id"]}
+    )
+
+# 12. Create Authenticated Client
+@pytest.fixture
+def authorized_client(client, token):
+    client.headers.update({
+        "Authorization": f"Bearer {token}"
+    })
+    return client
